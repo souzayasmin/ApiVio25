@@ -1,24 +1,20 @@
 const connect = require("../db/connect");
+const validateUser = require("../services/validateUser")
+const validadeCpf = require("../services/validateCpf")
 
 module.exports = class userController {
   static async createUser(req, res) {
     const { cpf, email, password, name, data_nascimento } = req.body;
 
-    if (!cpf || !email || !password || !name || !data_nascimento) {
-      return res
-        .status(400)
-        .json({ error: "Todos os campos devem ser preenchidos" });
-    } // else if
-    else if (isNaN(cpf) || cpf.length !== 11) {
-      return res.status(400).json({
-        error: "CPF inválido. Deve conter exatamente 11 dígitos numéricos",
-      });
-    } // else if
-    else if (!email.includes("@")) {
-      return res.status(400).json({ error: "Email inválido. Deve conter @" });
-    } // else if
-    else {
-      // Construção da query INSERT
+    const validation = validateUser(req.body)
+    if(validation){
+      return res.status(400).json(validation)
+    }
+    const cpfValidation = await validadeCpf(cpf,null)
+    if(cpfValidation){
+      return res.status(400).json(cpfValidation)
+    }
+
       const query = `INSERT INTO usuario (cpf,password,email,name,data_nascimento) VALUES(
       '${cpf}',
       '${password}',
@@ -27,6 +23,7 @@ module.exports = class userController {
       '${data_nascimento}')`;
 
       // Executando a query criada
+
       try {
         connect.query(query, function (err) {
           if (err) {
@@ -35,55 +32,42 @@ module.exports = class userController {
             if (err.code === "ER_DUP_ENTRY") {
               return res
                 .status(400)
-                .json({ error: "O email já está vinculado a outro usuário" });
-            } else {
+                .json({ error: "O email ou CPF já está vinculado a outro usuário" });
+            } // if
+            else {
               return res
                 .status(500)
                 .json({ error: "Erro Interno do Servidor" });
-            }
-          } else {
+            } // else
+          } // if
+          else {
             return res
               .status(201)
               .json({ message: "Usuário Criado com Sucesso" });
-          }
-        });
+          } // else
+        }); // connect
       } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Erro Interno de Servidor" });
-      }
-    }
-  }
+      } // catch
+    } // else
+   // CreateUser
 
   static async getAllUsers(req, res) {
-    const query = `SELECT * FROM usuario`;
-
-    try {
-      connect.query(query, function (err, results) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
-        }
-        return res
-          .status(200)
-          .json({ message: "Lista de Usuários", users: results });
-      });
-    } catch (error) {
-      console.error("Erro ao executar consulta:", error);
-      res.status(500).json({ error: "Erro Interno de Servidor" });
-    }
   }
 
   static async updateUser(req, res) {
-    const { id_usuario, name, email, password, cpf, data_nascimento } = req.body;
-
-    if (!name || !email || !password || !cpf || !data_nascimento) {
-      return res
-        .status(400)
-        .json({ error: "Todos os campos devem ser preenchidos" });
-    }
-
-    const query = `UPDATE usuario SET name=?, email=?, password=?, cpf=?, data_nascimento=? WHERE id_usuario=?`;
-    const values = [name, email, password, cpf, data_nascimento, id_usuario];
+    const { id_usuario, name, email, password, cpf } = req.body;
+     const validation = validateUser(req.body)
+     if(validation){
+      return res.status(400).json(validation)
+     }
+     const cpfValidation = await validadeCpf(cpf,id)
+     if(cpfValidation){
+      return res.status(400).json(cpfValidation)
+     }
+    const query = `UPDATE usuario SET name=?, email=?, password=?, cpf=? WHERE id_usuario=?`;
+    const values = [name, email, password, cpf, id_usuario];
 
     try {
       connect.query(query, values, function (err, results) {
@@ -91,18 +75,18 @@ module.exports = class userController {
           if (err.code === "ER_DUP_ENTRY") {
             return res
               .status(400)
-              .json({ error: "Email já cadastrado por outro usuário" });
+              .json({ error: "Email já Cadastrado, por outro usuário" });
           } else {
             console.error(err);
             return res.status(500).json({ error: "Erro Interno do Servidor" });
           }
         }
         if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado" });
+          return res.status(404).json({ error: "Usuário não Encontrado" });
         }
         return res
           .status(200)
-          .json({ message: "Usuário atualizado com sucesso" });
+          .json({ message: "Usuário atualizado com Sucesso" });
       });
     } catch (error) {
       console.error("Erro ao executar consulta: ", error);
@@ -114,56 +98,53 @@ module.exports = class userController {
     const usuarioId = req.params.id_usuario;
     const query = `DELETE FROM usuario WHERE id_usuario = ?`;
     const values = [usuarioId];
-
     try {
       connect.query(query, values, function (err, results) {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
         }
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado" });
+        if(results.affectedRows === 0){
+          return res.status(404).json({error:"Usuário não Encontrado"})
         }
-        return res
-          .status(200)
-          .json({ message: "Usuário excluído com sucesso" });
+        return res.status(200).json({message:"Usuário Excluido com Sucesso"})
       });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      console.error(error)
+      return res.status(500).json({error: "Erro Interno do Servidor"})
     }
   }
 
-  // Método de Login - Implementar
-  static async loginUser(req, res) {
-    const { email, password } = req.body;
+  static async loginUser(req, res){
+    const{email, password} = req.body
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email e senha são obrigatórios" });
+    if(!email||!password){
+      return res.status(400).json({error:"Email e senha são obrigratorios"})
     }
 
-    const query = `SELECT * FROM usuario WHERE email = ?`;
+    const query = `SELECT * FROM usuario WHERE email = ?`
 
     try {
-      connect.query(query, [email], (err, results) => {
-        if (err) {
+      connect.query(query,[email],(err, results)=> {
+        if(err){
           console.log(err);
-          return res.status(500).json({ error: "Erro interno do servidor" });
+          return res.status(500).json({error:"Erro interno do servidor"})
         }
-        if (results.length === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado" });
+        if(results.length===0){
+          return res.status(401).json({error:"Usuário não encontrado"})
         }
-        const user = results[0];
+        const user =results[0];
 
-        if (user.password !== password) {
-          return res.status(403).json({ error: "Senha incorreta" });
+        if(user.password !== password){
+          return res.status(403).json({error:"Senha incorreta"})
         }
 
-        return res.status(200).json({ message: "Login bem sucedido", user });
-      });
+        return res.status(200).json({message:"Login bem sucedido", user})
+
+      })
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ error: "Erro interno do servidor" });
+      return res.status(500).json({error:"Erro interno do servidor"})
     }
   }
 };
