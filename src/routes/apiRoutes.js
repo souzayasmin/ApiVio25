@@ -29,6 +29,7 @@ router.get("/evento/:data", eventoController.getEventosPorData7Dias);
 //Rotas ingressoController
 router.post("/ingresso", ingressoController.createIngresso);
 router.get("/ingresso", ingressoController.getAllIngresso);
+router.get("/ingresso/evento/:id", ingressoController.getByIdEvento);
 router.put("/ingresso", ingressoController.updateIngresso);
 router.delete("/ingresso/:id", ingressoController.deleteIngresso);
 
