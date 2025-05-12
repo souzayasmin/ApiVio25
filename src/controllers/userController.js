@@ -1,4 +1,5 @@
 const connect = require("../db/connect");
+const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
 const validateCpf = require("../services/validateCpf");
 
@@ -24,12 +25,11 @@ module.exports = class userController {
         (err) => {
           if (err) {
             if (err.code === "ER_DUP_ENTRY") {
-              if (err.message.includes('email')) {
+              if (err.message.includes("email")) {
                 return res.status(400).json({ error: "Email já cadastrado" });
-              } 
-            }
-            else {
-              console.log(err)
+              }
+            } else {
+              console.log(err);
               return res
                 .status(500)
                 .json({ error: "Erro interno do servidor", err });
@@ -146,7 +146,15 @@ module.exports = class userController {
           return res.status(401).json({ error: "Senha incorreta" });
         }
 
-        return res.status(200).json({ message: "Login bem-sucedido", user });
+        const token = jwt.sign({ id: user.id_usuario }, process.env.SECRET, {
+          expiresIn: "1h",
+        });
+
+        delete user.password;
+
+        return res
+          .status(200)
+          .json({ message: "Login bem-sucedido", user, token });
       });
     } catch (error) {
       console.error("Erro ao executar a consulta:", error);
