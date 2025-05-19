@@ -1,0 +1,28 @@
+version: "3.8"
+
+services: //Define os serviços que compõem a aplicação:app e db
+  app:
+    build: . //O "." indica que a imagem do Docker será construída no diretório atual.
+    //Comandos a serem executados quando o container do serviço app iniciar.
+    command: /bin/sh -c "npm install && npm start" 
+    ports: // Mapeia a porta 5000 do container para a porta 5000 da máquina.
+      - "5000:5000"
+    volumes: //Monta o diretório atual da máquina host no diretório /usr/app dentro do container.
+      - .:/usr/app
+    depends_on: // Indica que o serviço app depende do serviço db.
+      - db
+
+  db:
+    image: mysql:5.7
+    restart: always // Configura o container para reiniciar automaticamente caso ele pare.
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vio_yasmin
+    ports:
+      - "3307:3307" // Mapeia a porta 3306 do container para a porta 3306 da máquina.
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+
+volumes:
+  db_data: // Define um volume nomeado para persistir os dados do banco de dados.
