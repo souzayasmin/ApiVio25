@@ -8,18 +8,14 @@ create table log_evento(
 
 delimiter $$
 
-create function registrar_log_evento(texto varchar(255))
-returns varchar(50)
-not deterministic
-modifies sql data
+create procedure registrar_log_evento(in texto varchar(255))
 begin
     insert into log_evento(mensagem)
     values (texto);
-
-    return 'Log inserido com sucesso';
-end; $$
+end $$
 
 delimiter ;
+
 
 show create function registrar_log_evento;
 

@@ -1,7 +1,7 @@
-
-create table resumo_evento(
-    id_evento int auto_increment primary key,
-    total_ingressos int
+create table resumo_evento (
+    id_evento int primary key,
+    total_ingressos int,
+    foreign key (id_evento) references evento(id_evento)
 );
 
 
