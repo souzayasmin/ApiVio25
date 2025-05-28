@@ -1,8 +1,7 @@
 const connect = require("../db/connect");
-const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
 const validateCpf = require("../services/validateCpf");
-
+const jwt = require("jsonwebtoken");
 module.exports = class userController {
   static async createUser(req, res) {
     const { cpf, email, password, name, data_nascimento } = req.body;
@@ -64,7 +63,7 @@ module.exports = class userController {
     }
   }
   static async updateUser(req, res) {
-    const { cpf, email, password, name, id } = req.body;
+    const { cpf, email, password, name, data_nascimento, id } = req.body;
 
     const validationError = validateUser(req.body);
     if (validationError) {
@@ -77,24 +76,36 @@ module.exports = class userController {
         return res.status(400).json(cpfError);
       }
       const query =
-        "UPDATE usuario SET cpf = ?, email = ?, password = ?, name = ? WHERE id_usuario = ?";
-      connect.query(query, [cpf, email, password, name, id], (err, results) => {
-        if (err) {
-          return res.status(500).json({ error: "Erro interno do servidor" });
+        "UPDATE usuario SET cpf = ?, email = ?, password = ?, name = ? , data_nascimento=? WHERE id_usuario = ?";
+      connect.query(
+        query,
+        [cpf, email, password, name, data_nascimento, id],
+        (err, results) => {
+          if (err) {
+            if (err.code === "ER_DUP_ENTRY") {
+              if (err.message.includes("email")) {
+                return res.status(400).json({ error: "Email já cadastrado" });
+              }
+            } else {
+              return res
+                .status(500)
+                .json({ error: "Erro interno do servidor", err });
+            }
+          }
+          if (results.affectedRows === 0) {
+            return res.status(404).json({ error: "Usuário não encontrado" });
+          }
+          return res
+            .status(200)
+            .json({ message: "Usuário atualizado com sucesso" });
         }
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado" });
-        }
-        return res
-          .status(200)
-          .json({ message: "Usuário atualizado com sucesso" });
-      });
+      );
     } catch (error) {
       return res.status(500).json({ error });
     }
   }
   static async deleteUser(req, res) {
-    const userId = req.params.id_usuario;
+    const userId = req.params.id;
     const query = `DELETE FROM usuario WHERE id_usuario = ?`;
     const values = [userId];
 
@@ -146,15 +157,13 @@ module.exports = class userController {
           return res.status(401).json({ error: "Senha incorreta" });
         }
 
-        const token = jwt.sign({ id: user.id_usuario }, process.env.SECRET, {
-          expiresIn: "1h",
-        });
+        const token = jwt.sign({id: user.id_usuario}, process.env.SECRET, {expiresIn: "1d",})
 
+        // delete -> Remove um atributo de um objeto
         delete user.password;
 
-        return res
-          .status(200)
-          .json({ message: "Login bem-sucedido", user, token });
+        return res.status(201).json({message:"Login-bem-sucedido", user, token})
+
       });
     } catch (error) {
       console.error("Erro ao executar a consulta:", error);

@@ -1,3 +1,10 @@
+
+create table resumo_evento(
+    id_evento int auto_increment primary key,
+    total_ingressos int
+);
+
+
 delimiter //
 
 create trigger atualizar_total_ingressos
