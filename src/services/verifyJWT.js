@@ -8,13 +8,14 @@ function verifyJWT(req, res, next) {
       .json({ auth: false, message: "Token não foi fornecido" });
   }
 
-  jwt.verify(token, process.env.SECRET, 
-    (err, decoded) => {
-        if (err) {
-            return res.status(403).json({auth:false, message:"Falha na autenticação do Token"});
-        }
-        req.userID = decoded.id;
-        next();
+  jwt.verify(token, process.env.SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(403)
+        .json({ auth: false, message: "Falha na autenticação do Token" });
+    }
+    req.userID = decoded.id;
+    next();
   });
 }
 
